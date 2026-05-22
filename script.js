@@ -47,20 +47,13 @@ async function handleDownload() {
 
 // Intercepts the download stream, buffers it to memory, and forces a native file save
 async function downloadFileDirectly(fileUrl, defaultName) {
-    const response = await fetch(fileUrl);
-    if (!response.ok) throw new Error("Failed to fetch stream source.");
-    
-    const blob = await response.blob();
-    const blobUrl = window.URL.createObjectURL(blob);
-    
-    const hiddenAnchor = document.createElement('a');
-    hiddenAnchor.href = blobUrl;
-    hiddenAnchor.download = defaultName;
-    
-    document.body.appendChild(hiddenAnchor);
-    hiddenAnchor.click();
-    
-    // Clean up temporary DOM strings and garbage collect memory
-    window.URL.revokeObjectURL(blobUrl);
-    document.body.removeChild(hiddenAnchor);
+    // Instead of fetching the data (which causes CORS and corruption),
+    // we create a link and force the browser to trigger a "Save As"
+    const a = document.createElement('a');
+    a.href = fileUrl;
+    a.download = defaultName; 
+    a.target = "_blank"; // Opens in a way that triggers native download
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 }
