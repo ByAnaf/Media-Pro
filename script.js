@@ -1,10 +1,9 @@
 /* ==========================================================
    Media Pro — Transfer Console
-   UI logic only. The actual fetch/extract call is a placeholder —
-   see handleDownload() below for where to wire your own backend.
+   UI logic connected to Cobalt Social Media Downloader via RapidAPI.
    ========================================================== */
 
-const urlInput      = document.getElementById('urlInput');
+const urlInput       = document.getElementById('urlInput');
 const dropzone       = document.getElementById('dropzone');
 const pasteBtn       = document.getElementById('pasteBtn');
 const clearBtn       = document.getElementById('clearBtn');
@@ -197,21 +196,41 @@ async function handleDownload() {
   }
 }
 
-/**
- * requestMedia() — PLACEHOLDER.
- *
- * This is where your own backend call belongs. It should:
- *  1. Accept a URL you have the rights to process (e.g. your own
- *     uploaded content, or a source with an official public API).
- *  2. Return { fileUrl, filename } pointing at a file your server
- *     is authorized to serve.
- *
- * This function intentionally does NOT call any third-party
- * extraction/bypass service — wire it up to your own legitimate
- * source before shipping.
- */
+/* ---------- API Backend Connection ---------- */
 async function requestMedia(url, format, quality) {
-  throw new Error('No backend connected yet — wire requestMedia() up to your own API.');
+  const API_ENDPOINT = 'https://cobalt-social-media-downloader.p.rapidapi.com/cobalt-download/';
+
+  const response = await fetch(API_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-rapidapi-host': 'cobalt-social-media-downloader.p.rapidapi.com',
+      'x-rapidapi-key': '808e07f8aemshbdd5eb299c11775p1d40e3jsn3ccb842fc7a1'
+    },
+    body: JSON.stringify({
+      url: url,
+      videoQuality: quality,
+      filenameStyle: 'basic',
+      downloadMode: format === 'audio' ? 'audio' : 'auto'
+    })
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(errorBody.message || `API request failed with status ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  // Maps Cobalt response back to handleDownload()'s requirements
+  if (data && data.url) {
+    return {
+      fileUrl: data.url,
+      filename: `mediapro_${format}_${quality}`
+    };
+  } else {
+    throw new Error('The API structure did not return a valid download link.');
+  }
 }
 
 function triggerBrowserSave(fileUrl, filename) {
